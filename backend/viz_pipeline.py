@@ -109,6 +109,16 @@ R3. Use Tailwind CSS utility classes for layout and primary styling.
     NEVER split the screen into a "plot area" and a "controls area" side by
     side or stacked — the plot must always fill the entire viewport.
 
+    CRITICAL POINTER EVENTS: The overlay container div MUST have
+    style="pointer-events:none" so mouse drag/rotate on the Plotly canvas
+    is never blocked. Re-enable pointer events only on the interactive
+    children (buttons, inputs, labels):
+      <div class="absolute top-4 right-4 ..." style="pointer-events:none">
+        <button style="pointer-events:auto" ...>Play</button>
+        <input  style="pointer-events:auto" type="range" ...>
+      </div>
+    Without this, the overlay intercepts mouse events and 3D rotation stops working.
+
 ── JAVASCRIPT ARCHITECTURE ─────────────────────────────────────────────
 R4. ALL initialisation logic (Plotly.newPlot, slider wiring, first
     simulation run) MUST be inside a single:
