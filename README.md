@@ -48,10 +48,12 @@ indicator in the top-right corner of the header).
 ### 3. Start
 
 ```bash
-./start.sh
+bash start.sh
 ```
 
 Then open **http://localhost:5173** in your browser.
+
+> **Note:** Run this in a terminal (Terminal.app, iTerm2, etc.), not by clicking the file in VS Code or Finder — those will open it as a text file instead of running it.
 
 `start.sh` automatically:
 - checks Python / Node versions
