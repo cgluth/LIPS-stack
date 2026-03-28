@@ -41,17 +41,15 @@ ok "Node.js $(node --version)"
 command -v npm &>/dev/null || die "npm required (ships with Node.js)"
 ok "npm $(npm --version)"
 
-# LIPS package (warn only — pipeline stages will fail if missing, but IDE still starts)
-PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-if PYTHONPATH="$PARENT_DIR" $PYTHON -c "import lips" 2>/dev/null; then
-  ok "LIPS package found at $PARENT_DIR/lips"
+# LIPS package (vendored at lips-ide/lips/)
+if PYTHONPATH="$SCRIPT_DIR" $PYTHON -c "import lips" 2>/dev/null; then
+  ok "LIPS package found"
 else
-  warn "LIPS package not found at $PARENT_DIR/lips"
-  warn "Pipeline stages will fail. See README.md → Troubleshooting."
+  warn "LIPS package not found — pipeline stages will fail."
 fi
 
 # Export PYTHONPATH so uvicorn and its child processes inherit it
-export PYTHONPATH="$PARENT_DIR${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
 
 # ── Backend ───────────────────────────────────────────────────────────────────
 section "Starting backend"

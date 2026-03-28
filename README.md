@@ -3,8 +3,6 @@
 A browser-based IDE for the **LIPS** (LLM-driven Iterative Physics Synthesis) pipeline.
 Write a physics prompt → generate Python simulation code with AI → visualise it interactively.
 
-![Pipeline: prompt → code → interactive 3D visualisation]
-
 ---
 
 ## What it does
@@ -27,34 +25,12 @@ Write a physics prompt → generate Python simulation code with AI → visualise
 
 ---
 
-## Directory structure
-
-`lips-ide` is designed to live alongside the LIPS package and templates:
-
-```
-PythonProject/               ← parent directory
-├── lips/                    ← LIPS Python package  (required for pipeline stages)
-├── LIPS-project-templates/  ← simulation templates (required for "New Project")
-└── lips-ide/                ← this repository
-    ├── backend/
-    ├── frontend/
-    ├── workspaces/          ← created automatically, git-ignored
-    ├── .env.example
-    └── start.sh
-```
-
-If you only have `lips-ide` cloned, the IDE starts fine but pipeline stages
-will fail until `lips/` is available as a sibling directory.
-
----
-
 ## Quick start
 
-### 1. Clone into the right place
+### 1. Clone
 
 ```bash
-cd /path/to/PythonProject   # your directory that contains lips/ and LIPS-project-templates/
-git clone <this-repo-url> lips-ide
+git clone https://github.com/cgluth/LIPS-stack.git lips-ide
 cd lips-ide
 ```
 
@@ -80,7 +56,6 @@ Then open **http://localhost:5173** in your browser.
 `start.sh` automatically:
 - checks Python / Node versions
 - installs Python and npm dependencies
-- exports `PYTHONPATH` so `lips` is importable
 - polls until the backend is ready before printing the URLs
 - shuts down both servers cleanly on Ctrl+C
 
@@ -93,11 +68,12 @@ Then open **http://localhost:5173** in your browser.
    physics simulation description (see examples below)
 3. Press **Ctrl+S** to save
 4. Click the pipeline stages in order: **requirements → specifications → code-raw**
-   - each stage streams its LLM output to the console on the right
-5. Once all stages show ✓, click **⚡ Visualize**
+   — each stage streams its LLM output to the console on the right
+5. Once all stages show ✓, click **Visualize**
 6. The interactive visualisation appears in the bottom pane:
    - **▶ Play / ⏸ Pause / ↺ Reset** animate the trajectory through time
-   - Parameter sliders update the physics and restart the animation
+   - Duration slider controls how long the simulation runs
+   - Physics parameter sliders update the simulation and restart the animation
 
 ---
 
@@ -150,7 +126,7 @@ specifications →  technical spec + class/sequence diagrams
 code-raw       →  working Python simulation code
 ```
 
-The **⚡ Visualize** button calls a separate LLM pass that reads the generated Python
+The **Visualize** button calls a separate LLM pass that reads the generated Python
 code, re-implements the physics in JavaScript, and returns a single self-contained
 HTML file rendered in the bottom iframe.
 
@@ -158,14 +134,8 @@ HTML file rendered in the bottom iframe.
 
 ## Troubleshooting
 
-**"LIPS package not found"**
-Make sure `lips/` exists as a sibling of `lips-ide/`:
-```bash
-ls ../lips   # should show the LIPS package files
-```
-
 **"MISTRAL_API_KEY is not set"**
-Either add it to `lips-ide/.env` or click the key indicator in the IDE header.
+Either add it to `.env` or click the key indicator in the IDE header.
 
 **Port already in use**
 ```bash
@@ -176,8 +146,7 @@ lsof -ti:5173 | xargs kill -9   # stop existing frontend
 
 **Visualisation shows nothing / blank pane**
 Open browser DevTools (F12) → Console tab. A JavaScript error will be shown.
-Click **⚡ Visualize** again — the self-healing retry loop will feed the error
-back to the LLM and generate a corrected version.
+Click **Visualize** again — the LLM will use the error to generate a corrected version.
 
 ---
 

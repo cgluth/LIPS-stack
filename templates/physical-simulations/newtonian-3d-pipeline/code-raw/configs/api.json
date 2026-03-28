@@ -1,0 +1,17 @@
+{
+  "url": "https://api.mistral.ai/v1/chat/completions",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "payload": {
+    "model": "mistral-large-latest",
+    "max_tokens": 10000,
+    "temperature": 0
+  },
+  "timeout": 300,
+  "api_key_env": "MISTRAL_API_KEY",
+  "system": "You are a helpful assistant."
+}
+
+

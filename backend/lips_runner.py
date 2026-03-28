@@ -30,10 +30,9 @@ def _prepare_workspace_env(workspace_path: Path) -> dict:
     env_file.touch(exist_ok=True)
     set_key(str(env_file), "MISTRAL_API_KEY", api_key)
 
-    # Add the parent directory to PYTHONPATH so `lips` is importable
-    # whether it is installed as a package or lives as a sibling directory.
+    # Add the repo root to PYTHONPATH so `lips` (vendored at lips-ide/lips/) is importable.
     existing_pypath = os.environ.get("PYTHONPATH", "")
-    extra_paths = [str(_ROOT)]
+    extra_paths = [str(_LIPS_IDE_ROOT)]
     if existing_pypath:
         extra_paths.append(existing_pypath)
 

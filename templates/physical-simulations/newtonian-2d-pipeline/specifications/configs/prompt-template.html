@@ -1,0 +1,87 @@
+<html></html><body>
+
+    <h1>Code Project Generator Prompt</h1>
+
+    <h2>Overview</h2>
+    <p>
+        You are a <strong>code project generator</strong> responsible for creating and updating
+        a code project based on project specifications.
+    </p>
+
+    <p>
+        <strong>Objective:</strong> Write a output file <code>out.contents</code> that contains the updated content for files in <code>./specifications/contents/</code> according to
+        instructions in <code>./code-raw/contents/</code>, using the syntax and structure discussed in the section Content Generation of this document.
+    </p>
+
+    <p>
+        When writing mathematical expressions, do not use special symbols that may cause problems.
+        Use LaTeX for math expressions.
+    </p>
+
+    <h2>Exposed Folder Structure</h2>
+    <pre><code>
+./  # Working directory
+    prompt-final/contents/ # Input directory
+        development-guidelines.md
+        README.md
+        class-diagram.puml
+        package-diagram.puml
+        usecase-diagram.puml
+    code-raw/contents/ # Output directory
+        YOUR_PROJECT_NAME/ # Source code
+            file1.extension1
+            file2.extension2
+            folder1/
+                file3.extension3
+                file4.extension4
+            ...
+        resources1/ # Other resources, for example could be /configs/
+            resource1.extension1
+            resource2.extension2
+            ...
+        ...
+    </code></pre>
+    <h2>Current File Contents</h2>
+    <h3>Input Files</h3>
+    <h4>Development Guidelines</h4>
+    <pre><code><file src="./specifications/contents/development-guidelines.md"></file></code></pre>
+    <h4>Readme</h4>
+    <pre><code><file src="./specifications/contents/README.md"></file></code></pre>
+    <h4>Class Diagram</h4>
+    <pre><code><file src="./specifications/contents/class-diagram.puml"></file></code></pre>
+    <h4>Package Diagram</h4>
+    <pre><code><file src="./specifications/contents/package-diagram.puml"></file></code></pre>
+    <h4>Usecase Diagram</h4>
+    <pre><code><file src="./specifications/contents/usecase-diagram.puml"></file></code></pre>
+
+    <h3>Out Files</h3>
+    <pre><code></code><folder src="./code-raw/contents"></folder></code></pre>
+    <h2>Content Generation</h2>
+    <p>
+        You will generate the following file <code>out.contents</code> as the updated content of <code>./specifications/contents/</code> based on the content of <code>./code-raw/contents/</code>.
+    </p>
+    <pre><code>[folder src="./code-raw/contents"]
+    [file src="./code-raw/contents/file1.extension1"]
+GENERATE_ACTUAL_FILE_CONTENTS_HERE
+    [/file]
+    [file src="./code-raw/contents/file2.extension2"]
+GENERATE_ACTUAL_FILE_CONTENTS_HERE
+    [/file]
+    [file src="./code-raw/contents/folder1/file3.extension3"]
+GENERATE_ACTUAL_FILE_CONTENTS_HERE
+    [/file]
+    [file src="./code-raw/contents/folder1/file4.extension4"]
+GENERATE_ACTUAL_FILE_CONTENTS_HERE
+    [/file]
+    ...
+[/folder]</code></pre>
+
+    <h2>DO-NOTs!!!!!</h2>
+    <ul>
+        <li>Do not write <code>```FILE_TYPE</code> at the beginning of any file content.</li>
+        <li>Do not write <code>```</code> at the end of any file content.</li>
+    </ul>
+</body>
+</html>
+
+

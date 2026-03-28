@@ -1,0 +1,8 @@
+{
+    "statges": [
+        "requirements",
+        "specifications",
+        "code-raw",
+        "code-final"
+    ]
+}
