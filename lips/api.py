@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from dotenv import load_dotenv
-import requests
+import httpx
 
 
 class API:
@@ -49,7 +49,7 @@ class API:
         payload["messages"] = messages
 
         try:
-            response = requests.request(
+            response = httpx.request(
                 method=self.method,
                 url=self.url,
                 headers=self.headers,
@@ -58,7 +58,7 @@ class API:
             )
             response.raise_for_status()
 
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             raise RuntimeError(f"API request failed: {e}")
 
         data = response.json()
