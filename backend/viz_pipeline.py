@@ -28,7 +28,8 @@ from dotenv import load_dotenv
 MISTRAL_URL  = "https://api.mistral.ai/v1/chat/completions"
 MAX_RETRIES  = 2
 
-_SKIP_DIRS   = {"__pycache__", ".git", "tests", "test", ".venv", "venv", "node_modules"}
+_SKIP_DIRS   = {"__pycache__", ".git", "tests", "test", ".venv", "venv", "node_modules",
+                "visualization", "visualisation", "plot", "plots", "plotting"}
 _CONFIG_EXTS = {".json", ".yaml", ".yml", ".toml", ".ini"}
 
 # ---------------------------------------------------------------------------
@@ -414,6 +415,19 @@ _REJECTION_MESSAGES = {
         "REJECTION — no <script> tags found.\n"
         "The simulation logic MUST be implemented in JavaScript inside <script> tags."
     ),
+    "no_domcontentloaded": (
+        "REJECTION — DOMContentLoaded event listener is missing.\n"
+        "ALL initialisation (Plotly.newPlot, slider wiring, simulation) MUST be inside:\n"
+        "  document.addEventListener('DOMContentLoaded', () => { … });\n"
+        "Never call Plotly or read DOM elements at the top level of a <script> block."
+    ),
+    "no_fixed_plot": (
+        "REJECTION — the Plotly chart container is not full-bleed.\n"
+        "The plot <div> MUST have this exact inline style so it fills the viewport inside an iframe:\n"
+        '  <div id="plot" style="position:fixed;inset:0;width:100%;height:100%"></div>\n'
+        "NEVER rely on Tailwind height classes alone — they resolve to 0px inside iframes.\n"
+        "This is the most common cause of a blank white page."
+    ),
 }
 
 
@@ -434,6 +448,20 @@ def _validate_html(html: str) -> str | None:
 
     if "<script" not in lower:
         return _REJECTION_MESSAGES["no_script"]
+
+    if "domcontentloaded" not in lower:
+        return _REJECTION_MESSAGES["no_domcontentloaded"]
+
+    # The plot div must have explicit fixed/absolute positioning with a size.
+    # Without this the chart renders into a 0-height container and nothing is visible.
+    has_fixed    = "position:fixed"    in html or "position: fixed"    in html
+    has_absolute = "position:absolute" in html or "position: absolute" in html
+    has_inset    = "inset:0"           in html or "inset: 0"           in html
+    has_100w     = "width:100%"        in html or "width: 100%"        in html
+    has_100h     = "height:100%"       in html or "height: 100%"       in html
+    has_100vh    = "height:100vh"      in html or "height: 100vh"      in html
+    if not (has_fixed or (has_absolute and (has_inset or (has_100w and (has_100h or has_100vh))))):
+        return _REJECTION_MESSAGES["no_fixed_plot"]
 
     return None
 

@@ -82,6 +82,35 @@ def test_validate_html_rejects_missing_script():
     assert "script" in result.lower()
 
 
+def test_validate_html_rejects_missing_domcontentloaded():
+    html = VALID_HTML.replace("document.addEventListener('DOMContentLoaded', () => {", "window.onload = () => {").replace("});", "};")
+    result = _validate_html(html)
+    assert result is not None
+    assert "DOMContentLoaded" in result
+
+
+def test_validate_html_rejects_no_fixed_plot():
+    # HTML with no fixed/absolute positioning on the plot div
+    html = """<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<div id="plot" class="h-screen w-full"></div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  Plotly.newPlot('plot', [], {});
+});
+</script>
+</body>
+</html>"""
+    result = _validate_html(html)
+    assert result is not None
+    assert "full-bleed" in result or "position" in result.lower()
+
+
 # ---------------------------------------------------------------------------
 # Sync tests — filesystem helpers
 # ---------------------------------------------------------------------------
