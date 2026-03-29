@@ -39,12 +39,14 @@ cp .env.example .env
 #   → open .env and set MISTRAL_API_KEY=sk-...
 
 # 3. Start
-bash start.sh
+bash start.sh          # macOS / Linux / WSL / Git Bash
+start.bat              # Windows (Command Prompt — double-click or run in cmd)
 ```
 
 Then open **http://localhost:5173**.
 
-> Run `bash start.sh` in a terminal (Terminal.app / iTerm2 / WSL / Git Bash), not by double-clicking — macOS/Windows will open it as a text file otherwise.
+> **macOS/Linux:** run `bash start.sh` in a terminal (Terminal.app / iTerm2), not by double-clicking.
+> **Windows:** double-click `start.bat` or run it from Command Prompt. Both scripts check for port conflicts and will tell you exactly what to do if a port is already in use.
 
 `start.sh` checks prerequisites, installs all Python and Node dependencies, starts both servers, and shuts them down cleanly on Ctrl+C.
 

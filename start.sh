@@ -48,6 +48,34 @@ else
   warn "LIPS package not found — pipeline stages will fail."
 fi
 
+# ── Port availability ──────────────────────────────────────────────────────────
+section "Checking ports"
+
+port_in_use() {
+  $PYTHON -c "
+import socket
+s = socket.socket()
+s.settimeout(1)
+result = s.connect_ex(('127.0.0.1', $1))
+s.close()
+exit(0 if result == 0 else 1)
+" 2>/dev/null
+}
+
+if port_in_use 8000; then
+  die "Port 8000 is already in use. Stop the existing process first:
+       Mac/Linux: lsof -ti:8000 | xargs kill -9
+       Windows:   netstat -ano | findstr :8000  (then taskkill /F /PID <pid>)"
+fi
+ok "Port 8000 is free"
+
+if port_in_use 5173; then
+  die "Port 5173 is already in use. Stop the existing process first:
+       Mac/Linux: lsof -ti:5173 | xargs kill -9
+       Windows:   netstat -ano | findstr :5173  (then taskkill /F /PID <pid>)"
+fi
+ok "Port 5173 is free"
+
 # Export PYTHONPATH so uvicorn and its child processes inherit it
 export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
 
@@ -62,11 +90,18 @@ $PYTHON -m uvicorn main:app --reload --port 8000 --log-level warning &
 BACKEND_PID=$!
 ok "FastAPI server started (PID $BACKEND_PID)"
 
-# Poll until the API responds (up to 15 s)
+# Poll until the API responds (up to 15 s) — uses Python, no curl required
 echo -n "  Waiting for backend"
 READY=0
 for i in $(seq 1 30); do
-  if curl -sf http://localhost:8000/api/templates > /dev/null 2>&1; then
+  if $PYTHON -c "
+import urllib.request, sys
+try:
+    urllib.request.urlopen('http://localhost:8000/api/templates', timeout=1)
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+" 2>/dev/null; then
     READY=1; break
   fi
   printf '.'
