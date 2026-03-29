@@ -214,7 +214,8 @@ def create_workspace(body: CreateWorkspaceBody):
 
     # Pre-seed product-requirements.md so the user knows exactly what to write
     req_file = dst / "requirements" / "contents" / "product-requirements.md"
-    if req_file.exists() and req_file.stat().st_size == 0:
+    req_file.parent.mkdir(parents=True, exist_ok=True)
+    if not req_file.exists() or req_file.stat().st_size == 0:
         req_file.write_text(SAMPLE_REQUIREMENTS, encoding="utf-8")
 
     return {"workspace": body.name}
