@@ -31,7 +31,8 @@ export default function ControlPanel({
   onVisualize,
 }: Props) {
   const busy = runningStage !== null || isVisualizing
-  const blocked = requirementsEmpty || busy
+  const allStagesDone = stages.length > 0 && stages.every(s => s.has_output)
+  const blocked = requirementsEmpty || busy || !allStagesDone
 
   return (
     <div className="flex flex-col h-full" style={{ background: '#111111', borderRight: '1px solid #222222' }}>
@@ -162,7 +163,13 @@ export default function ControlPanel({
         <button
           disabled={blocked}
           onClick={onVisualize}
-          title={requirementsEmpty ? 'Run the full pipeline first' : 'Generate interactive visualization'}
+          title={
+            requirementsEmpty
+              ? 'Write your prompt first'
+              : !allStagesDone
+              ? 'Run all pipeline stages first'
+              : 'Generate interactive visualization'
+          }
           className="btn-accent w-full px-3 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
         >
           {isVisualizing ? (
