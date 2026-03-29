@@ -19,18 +19,18 @@ echo -e "${BOLD}${C}━━━━━━━━━━━━━━━━━━━━
 section "Checking prerequisites"
 
 # Python 3.11+
-PYTHON=""
+SYS_PYTHON=""
 for cmd in python3 python; do
   if command -v "$cmd" &>/dev/null; then
     ver=$($cmd -c 'import sys; print(1 if sys.version_info >= (3, 11) else 0)' 2>/dev/null || echo 0)
     if [ "$ver" -eq 1 ]; then
-      PYTHON="$cmd"
+      SYS_PYTHON="$cmd"
       ok "Python $($cmd --version 2>&1)"
       break
     fi
   fi
 done
-[ -z "$PYTHON" ] && die "Python 3.11+ required — https://python.org"
+[ -z "$SYS_PYTHON" ] && die "Python 3.11+ required — https://python.org"
 
 # Node 18+
 command -v node &>/dev/null || die "Node.js 18+ required — https://nodejs.org"
@@ -41,12 +41,16 @@ ok "Node.js $(node --version)"
 command -v npm &>/dev/null || die "npm required (ships with Node.js)"
 ok "npm $(npm --version)"
 
-# LIPS package (vendored at lips-ide/lips/)
-if PYTHONPATH="$SCRIPT_DIR" $PYTHON -c "import lips" 2>/dev/null; then
-  ok "LIPS package found"
+# ── Virtual environment ────────────────────────────────────────────────────────
+section "Setting up virtual environment"
+VENV="$SCRIPT_DIR/.venv"
+if [ ! -f "$VENV/bin/python" ]; then
+  $SYS_PYTHON -m venv "$VENV"
+  ok "Created virtual environment at .venv/"
 else
-  warn "LIPS package not found — pipeline stages will fail."
+  ok "Using existing virtual environment at .venv/"
 fi
+PYTHON="$VENV/bin/python"
 
 # ── Port availability ──────────────────────────────────────────────────────────
 section "Checking ports"
@@ -76,16 +80,18 @@ if port_in_use 5173; then
 fi
 ok "Port 5173 is free"
 
-# Export PYTHONPATH so uvicorn and its child processes inherit it
-export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
-
 # ── Backend ───────────────────────────────────────────────────────────────────
 section "Starting backend"
+
+# Install backend deps + lips (editable) into the venv.
+# Re-running this is fast when nothing has changed.
+$PYTHON -m pip install \
+  -e "$SCRIPT_DIR/lips" \
+  -r "$SCRIPT_DIR/backend/requirements.txt" \
+  -q --disable-pip-version-check
+ok "Python dependencies ready (lips installed as editable package)"
+
 cd "$SCRIPT_DIR/backend"
-
-$PYTHON -m pip install -r requirements.txt -q --disable-pip-version-check
-ok "Python dependencies ready"
-
 $PYTHON -m uvicorn main:app --reload --port 8000 --log-level warning &
 BACKEND_PID=$!
 ok "FastAPI server started (PID $BACKEND_PID)"

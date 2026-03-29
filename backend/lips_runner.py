@@ -22,6 +22,10 @@ def _prepare_workspace_env(workspace_path: Path) -> dict:
     Ensure workspace .env has the latest key, and return an env dict
     to pass directly to the subprocess so the key is available even
     before load_dotenv runs inside the child process.
+
+    `lips` is installed as an editable package in the same venv that runs
+    this server (via start.sh / start.bat), so sys.executable already has
+    it on its path — no PYTHONPATH manipulation required.
     """
     api_key = _get_api_key()
 
@@ -30,18 +34,7 @@ def _prepare_workspace_env(workspace_path: Path) -> dict:
     env_file.touch(exist_ok=True)
     set_key(str(env_file), "MISTRAL_API_KEY", api_key)
 
-    # Add the repo root to PYTHONPATH so `lips` (vendored at lips-ide/lips/) is importable.
-    existing_pypath = os.environ.get("PYTHONPATH", "")
-    extra_paths = [str(_LIPS_IDE_ROOT)]
-    if existing_pypath:
-        extra_paths.append(existing_pypath)
-
-    subprocess_env = {
-        **os.environ,
-        "MISTRAL_API_KEY": api_key,
-        "PYTHONPATH": os.pathsep.join(extra_paths),
-    }
-    return subprocess_env
+    return {**os.environ, "MISTRAL_API_KEY": api_key}
 
 
 async def run_lips_stage(websocket: WebSocket, workspace_path: Path, stage: str):

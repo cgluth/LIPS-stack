@@ -48,7 +48,7 @@ Then open **http://localhost:5173**.
 > **macOS/Linux:** run `bash start.sh` in a terminal (Terminal.app / iTerm2), not by double-clicking.
 > **Windows:** double-click `start.bat` or run it from Command Prompt. Both scripts check for port conflicts and will tell you exactly what to do if a port is already in use.
 
-`start.sh` checks prerequisites, installs all Python and Node dependencies, starts both servers, and shuts them down cleanly on Ctrl+C.
+`start.sh` checks prerequisites, creates a `.venv` virtual environment on first run, installs all Python and Node dependencies (including `lips` as an editable package), starts both servers, and shuts them down cleanly on Ctrl+C.
 
 ---
 

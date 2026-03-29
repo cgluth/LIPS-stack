@@ -9,21 +9,21 @@ echo   LIPS IDE
 echo ============================================
 
 :: ── Python 3.11+ ─────────────────────────────────────────────────────────────
-set "PYTHON="
+set "SYS_PYTHON="
 for %%c in (python3 python) do (
-  if "!PYTHON!"=="" (
+  if "!SYS_PYTHON!"=="" (
     %%c --version >nul 2>&1 && (
       for /f %%v in ('%%c -c "import sys; print(1 if sys.version_info >= (3,11) else 0)" 2^>nul') do (
-        if "%%v"=="1" set "PYTHON=%%c"
+        if "%%v"=="1" set "SYS_PYTHON=%%c"
       )
     )
   )
 )
-if "!PYTHON!"=="" (
+if "!SYS_PYTHON!"=="" (
   echo  [ERROR] Python 3.11+ required - https://python.org
   goto :fail
 )
-for /f "tokens=*" %%v in ('!PYTHON! --version 2^>^&1') do echo  [OK] %%v
+for /f "tokens=*" %%v in ('!SYS_PYTHON! --version 2^>^&1') do echo  [OK] %%v
 
 :: ── Node 18+ ─────────────────────────────────────────────────────────────────
 node --version >nul 2>&1 || (
@@ -43,11 +43,25 @@ npm --version >nul 2>&1 || (
 )
 for /f "tokens=*" %%v in ('npm --version') do echo  [OK] npm %%v
 
+:: ── Virtual environment ───────────────────────────────────────────────────────
+echo.
+echo ── Setting up virtual environment
+
+set "VENV=%SCRIPT_DIR%\.venv"
+set "PYTHON=%VENV%\Scripts\python.exe"
+
+if not exist "!PYTHON!" (
+  !SYS_PYTHON! -m venv "!VENV!"
+  echo  [OK] Created virtual environment at .venv\
+) else (
+  echo  [OK] Using existing virtual environment at .venv\
+)
+
 :: ── Port checks ──────────────────────────────────────────────────────────────
 echo.
 echo ── Checking ports
 
-!PYTHON! -c "import socket; s=socket.socket(); s.settimeout(1); r=s.connect_ex(('127.0.0.1',8000)); s.close(); exit(0 if r==0 else 1)" >nul 2>&1
+"!PYTHON!" -c "import socket; s=socket.socket(); s.settimeout(1); r=s.connect_ex(('127.0.0.1',8000)); s.close(); exit(0 if r==0 else 1)" >nul 2>&1
 if !errorlevel!==0 (
   echo  [ERROR] Port 8000 is already in use.
   echo          Find the process: netstat -ano ^| findstr :8000
@@ -56,7 +70,7 @@ if !errorlevel!==0 (
 )
 echo  [OK] Port 8000 is free
 
-!PYTHON! -c "import socket; s=socket.socket(); s.settimeout(1); r=s.connect_ex(('127.0.0.1',5173)); s.close(); exit(0 if r==0 else 1)" >nul 2>&1
+"!PYTHON!" -c "import socket; s=socket.socket(); s.settimeout(1); r=s.connect_ex(('127.0.0.1',5173)); s.close(); exit(0 if r==0 else 1)" >nul 2>&1
 if !errorlevel!==0 (
   echo  [ERROR] Port 5173 is already in use.
   echo          Find the process: netstat -ano ^| findstr :5173
@@ -65,18 +79,15 @@ if !errorlevel!==0 (
 )
 echo  [OK] Port 5173 is free
 
-:: ── PYTHONPATH ───────────────────────────────────────────────────────────────
-set "PYTHONPATH=%SCRIPT_DIR%;%PYTHONPATH%"
-
 :: ── Backend ───────────────────────────────────────────────────────────────────
 echo.
 echo ── Starting backend
+
+"!PYTHON!" -m pip install -e "%SCRIPT_DIR%\lips" -r "%SCRIPT_DIR%\backend\requirements.txt" -q --disable-pip-version-check
+echo  [OK] Python dependencies ready (lips installed as editable package)
+
 cd /d "%SCRIPT_DIR%\backend"
-
-!PYTHON! -m pip install -r requirements.txt -q --disable-pip-version-check
-echo  [OK] Python dependencies ready
-
-start /b !PYTHON! -m uvicorn main:app --reload --port 8000 --log-level warning
+start /b "!PYTHON!" -m uvicorn main:app --reload --port 8000 --log-level warning
 echo  [OK] FastAPI server started
 
 :: Poll until backend responds (up to 15 s)
@@ -84,7 +95,7 @@ echo  Waiting for backend...
 set "READY=0"
 for /l %%i in (1,1,30) do (
   if "!READY!"=="0" (
-    !PYTHON! -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/api/templates',timeout=1); sys.exit(0)" >nul 2>&1
+    "!PYTHON!" -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/api/templates',timeout=1); sys.exit(0)" >nul 2>&1
     if !errorlevel!==0 (
       set "READY=1"
     ) else (
