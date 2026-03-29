@@ -111,6 +111,42 @@ document.addEventListener('DOMContentLoaded', () => {
     assert "full-bleed" in result or "position" in result.lower()
 
 
+def test_validate_html_rejects_arrow_function_raf_callback():
+    # LLM uses `const step = () => {...}` instead of `function step() {...}`
+    html = """<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<div id="plot" style="position:fixed;inset:0;width:100%;height:100%"></div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  let animHandle = null;
+  const step = () => {
+    Plotly.react('plot', [], {});
+    animHandle = requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+});
+</script>
+</body>
+</html>"""
+    result = _validate_html(html)
+    assert result is not None
+    assert "arrow" in result.lower() or "function" in result.lower()
+
+
+def test_validate_html_passes_function_declaration_raf_callback():
+    html = VALID_HTML.replace(
+        "Plotly.newPlot('plot', [], {});",
+        "let h=null; function tick(){Plotly.react('plot',[],{}); h=requestAnimationFrame(tick);} requestAnimationFrame(tick);"
+    )
+    result = _validate_html(html)
+    assert result is None
+
+
 # ---------------------------------------------------------------------------
 # Sync tests — filesystem helpers
 # ---------------------------------------------------------------------------

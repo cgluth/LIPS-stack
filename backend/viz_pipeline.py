@@ -204,7 +204,10 @@ R13. The visualisation MUST play through time automatically. Implement
          const STEPS_PER_FRAME = 5; // points revealed per RAF tick
 
     c) In the animation loop use requestAnimationFrame and reveal the
-       trajectory incrementally with Plotly.react():
+       trajectory incrementally with Plotly.react().
+       CRITICAL: declare the callback with the `function` keyword so it
+       is hoisted — NEVER use `const tick = () => {{...}}` or any arrow
+       function, which would be undefined when first referenced:
          function tick() {{
            frameIndex = Math.min(frameIndex + STEPS_PER_FRAME,
                                  trajectory.length - 1);
@@ -220,7 +223,9 @@ R13. The visualisation MUST play through time automatically. Implement
              onPlaybackEnd();
          }}
 
-    d) Provide three clearly labelled control buttons:
+    d) Provide three clearly labelled control buttons.
+       All helper functions (play, pause, reset, onPlaybackEnd) MUST also
+       use `function` declarations, not arrow functions:
          ▶ Play   — starts / resumes (calls requestAnimationFrame(tick))
          ⏸ Pause  — stops  (calls cancelAnimationFrame(animHandle))
          ↺ Reset  — sets frameIndex = 0, redraws first frame, stops loop
@@ -462,6 +467,29 @@ def _validate_html(html: str) -> str | None:
     has_100vh    = "height:100vh"      in html or "height: 100vh"      in html
     if not (has_fixed or (has_absolute and (has_inset or (has_100w and (has_100h or has_100vh))))):
         return _REJECTION_MESSAGES["no_fixed_plot"]
+
+    # If requestAnimationFrame is used, the callback must be a hoisted `function`
+    # declaration. Arrow functions assigned to const/let are not hoisted and cause
+    # "X is not a function" runtime errors when the callback name is referenced
+    # before the declaration line.
+    import re as _re
+    if "requestanimationframe" in lower:
+        # Find callback name: requestAnimationFrame(someName)
+        raf_names = set(_re.findall(r"requestanimationframe\(\s*(\w+)\s*\)", lower))
+        # Check each callback name is declared with `function name(` not `const/let name =`
+        for name in raf_names:
+            is_function_decl = bool(_re.search(rf"\bfunction\s+{name}\s*\(", lower))
+            is_arrow         = bool(_re.search(rf"\b(?:const|let)\s+{name}\s*=", lower))
+            if is_arrow and not is_function_decl:
+                return (
+                    f"REJECTION — animation callback '{name}' is declared as a const/let "
+                    f"arrow function, which is not hoisted.\n"
+                    f"This causes 'step is not a function' (or similar) runtime errors.\n"
+                    f"Change it to a `function` declaration:\n"
+                    f"  function {name}() {{ … }}\n"
+                    f"ALL requestAnimationFrame callbacks and animation helpers MUST use "
+                    f"`function` declarations, never `const`/`let` arrow functions."
+                )
 
     return None
 
