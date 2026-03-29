@@ -89,14 +89,24 @@ def _is_lips_stage(path: Path) -> bool:
     return (path / "configs" / "api.json").exists()
 
 
+# Canonical pipeline stage order. Stages not in this list sort after.
+_STAGE_ORDER: dict[str, int] = {
+    "requirements":   0,
+    "specifications": 1,
+    "code-raw":       2,
+    "code-final":     3,
+}
+
+
 def _discover_stages(workspace_path: Path) -> list[dict]:
-    """Return ordered list of LIPS stages in the workspace."""
+    """Return stages in pipeline order (requirements → specifications → code-raw)."""
     stages = []
-    for sub in sorted(workspace_path.iterdir()):
+    for sub in workspace_path.iterdir():
         if sub.is_dir() and _is_lips_stage(sub):
             out_dir = sub / "out"
             has_output = out_dir.exists() and any(out_dir.iterdir())
             stages.append({"name": sub.name, "has_output": has_output})
+    stages.sort(key=lambda s: _STAGE_ORDER.get(s["name"], 99))
     return stages
 
 
