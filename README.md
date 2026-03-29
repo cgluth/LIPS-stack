@@ -140,7 +140,7 @@ lips-ide/
 │   ├── main.py                # FastAPI app — all HTTP + WebSocket routes
 │   ├── lips_runner.py         # Subprocess launcher + stdout streamer
 │   ├── viz_pipeline.py        # Visualisation LLM pipeline
-│   └── tests/                 # pytest suite (47 tests)
+│   └── tests/                 # pytest suite (49 tests)
 ├── lips/                      # LIPS package (vendored)
 ├── templates/physical-simulations/   # Project templates
 ├── workspaces/                # User projects (git-ignored)
@@ -152,14 +152,14 @@ lips-ide/
 ## Tests
 
 ```bash
-# Backend — 47 tests
+# Backend — 49 tests
 cd backend && python3 -m pytest tests/ -v
 
 # Frontend — 35 tests
 cd frontend && npm test
 ```
 
-82 tests total, 0 failures. See [`docs/testing.md`](docs/testing.md) for full coverage documentation.
+84 tests total, 0 failures. See [`docs/testing.md`](docs/testing.md) for full coverage documentation.
 
 ---
 

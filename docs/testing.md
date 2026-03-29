@@ -2,13 +2,13 @@
 
 ## Overview
 
-The project has a two-part automated test suite: a **Python backend suite** (pytest) and a **TypeScript frontend suite** (vitest). Together they cover 82 tests across 9 test modules, all passing with zero failures.
+The project has a two-part automated test suite: a **Python backend suite** (pytest) and a **TypeScript frontend suite** (vitest). Together they cover 84 tests across 9 test modules, all passing with zero failures.
 
 ```
-Backend  (pytest)   47 tests  5 modules
+Backend  (pytest)   49 tests  5 modules
 Frontend (vitest)   35 tests  4 modules
 ─────────────────────────────────────────
-Total               82 tests
+Total               84 tests
 ```
 
 Run the full suite:
@@ -112,11 +112,11 @@ The `has_output` flag drives the sequential unlock logic in the UI — these tes
 
 ---
 
-### `test_viz_pipeline.py` — Visualization Pipeline (20 tests)
+### `test_viz_pipeline.py` — Visualization Pipeline (24 tests)
 
 The largest and most detailed module. Tests are split into synchronous unit tests and asynchronous integration tests. The visualization pipeline was built following the reliability framework from the Google Research paper *"Generative UI: LLMs are Effective UI Generators"* (Leviathan et al.) — see [generative-ui-guardrails.md](generative-ui-guardrails.md) for the full design rationale. The tests cover all three layers of that framework: system prompt rules (validated indirectly through `_build_prompt`), post-processor validation (`_validate_html`), and the self-healing retry loop (`run_visualization`).
 
-**Synchronous — `_validate_html` (9 tests)**
+**Synchronous — `_validate_html` (11 tests)**
 
 | Test | What it checks |
 |---|---|
@@ -127,6 +127,8 @@ The largest and most detailed module. Tests are split into synchronous unit test
 | `test_validate_html_rejects_missing_script` | HTML with all `<script>` tags stripped returns a rejection containing "script" |
 | `test_validate_html_rejects_missing_domcontentloaded` | HTML that initialises Plotly via `window.onload` instead of `DOMContentLoaded` is rejected |
 | `test_validate_html_rejects_no_fixed_plot` | HTML whose plot `<div>` uses only Tailwind height classes (no `position:fixed` inline style) is rejected — this is the most common cause of a blank white page in an iframe |
+| `test_validate_html_rejects_missing_paper_bgcolor` | HTML that uses Plotly but omits `paper_bgcolor` from the layout is rejected — the missing key leaves Plotly with its default white background, which completely obscures the dark page canvas |
+| `test_validate_html_rejects_missing_responsive` | HTML that calls `Plotly.newPlot` without the `{ responsive: true }` config is rejected — without it the chart does not resize with the window |
 | `test_validate_html_rejects_arrow_function_raf_callback` | HTML that uses `const step = () => {...}` as the `requestAnimationFrame` callback is rejected — arrow functions are not hoisted and cause "step is not a function" runtime errors |
 | `test_validate_html_passes_function_declaration_raf_callback` | HTML that uses a proper `function tick() {}` declaration for the RAF callback passes validation |
 

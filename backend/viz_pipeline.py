@@ -159,16 +159,23 @@ R9. Call Plotly.newPlot with the responsive config:
     The {{ responsive: true }} config object is MANDATORY.
 
 R9b. For a modern, borderless look your Plotly layout object MUST hide
-    all grids, background planes, and axis containers. Always include:
+    all grids, background planes, and axis containers.
+    REQUIRED in EVERY Plotly layout (non-negotiable — omitting causes white background):
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor:  'rgba(0,0,0,0)',
-    For 3D scenes, also include inside the scene object:
+    For 3D scenes, REQUIRED inside the scene object (ALL fields — omitting any
+    one causes white planes or visible grid lines on a dark background):
       scene: {{
         xaxis: {{ showgrid: false, zeroline: false, visible: false }},
         yaxis: {{ showgrid: false, zeroline: false, visible: false }},
         zaxis: {{ showgrid: false, zeroline: false, visible: false }},
-        bgcolor: 'rgba(0,0,0,0)'
+        bgcolor: 'rgba(0,0,0,0)',
+        aspectmode: 'cube',
+        camera: {{ eye: {{ x: 1.5, y: 1.5, z: 1.0 }} }}
       }}
+    The aspectmode:'cube' keeps all three axes equally scaled so the trajectory
+    is never squashed or stretched. The camera eye prevents the initial view
+    from being zoomed so close that the particle starts off-screen.
     For 2D plots hide axis lines and gridlines similarly:
       xaxis: {{ showgrid: false, zeroline: false, showline: false }},
       yaxis: {{ showgrid: false, zeroline: false, showline: false }}
@@ -433,6 +440,20 @@ _REJECTION_MESSAGES = {
         "NEVER rely on Tailwind height classes alone — they resolve to 0px inside iframes.\n"
         "This is the most common cause of a blank white page."
     ),
+    "no_paper_bgcolor": (
+        "REJECTION — paper_bgcolor and plot_bgcolor are missing from the Plotly layout.\n"
+        "Without these the chart renders with a white background that obscures the dark page.\n"
+        "Your Plotly layout object MUST include BOTH:\n"
+        "  paper_bgcolor: 'rgba(0,0,0,0)',\n"
+        "  plot_bgcolor:  'rgba(0,0,0,0)',\n"
+        "This makes the chart transparent so the dark page background shows through."
+    ),
+    "no_responsive": (
+        "REJECTION — the Plotly.newPlot call is missing the responsive config.\n"
+        "Call Plotly.newPlot with the responsive flag:\n"
+        "  Plotly.newPlot(plotDiv, data, layout, { responsive: true });\n"
+        "Without this the chart does not resize with the window."
+    ),
 }
 
 
@@ -467,6 +488,16 @@ def _validate_html(html: str) -> str | None:
     has_100vh    = "height:100vh"      in html or "height: 100vh"      in html
     if not (has_fixed or (has_absolute and (has_inset or (has_100w and (has_100h or has_100vh))))):
         return _REJECTION_MESSAGES["no_fixed_plot"]
+
+    # Plotly background colours must be explicitly transparent or the chart renders
+    # with a white background, completely hiding the dark page behind it.
+    if "plotly" in lower:
+        if "paper_bgcolor" not in lower:
+            return _REJECTION_MESSAGES["no_paper_bgcolor"]
+
+        # Responsive config is required so the chart resizes with the window.
+        if "responsive" not in lower:
+            return _REJECTION_MESSAGES["no_responsive"]
 
     # If requestAnimationFrame is used, the callback must be a hoisted `function`
     # declaration. Arrow functions assigned to const/let are not hoisted and cause

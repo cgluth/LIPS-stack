@@ -24,10 +24,11 @@ VALID_HTML = """<!DOCTYPE html>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 </head>
 <body>
-<div id="plot" style="position:fixed;inset:0"></div>
+<div id="plot" style="position:fixed;inset:0;width:100%;height:100%"></div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  Plotly.newPlot('plot', [], {});
+  const layout = { paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)' };
+  Plotly.newPlot('plot', [], layout, { responsive: true });
 });
 </script>
 </body>
@@ -123,9 +124,11 @@ def test_validate_html_rejects_arrow_function_raf_callback():
 <div id="plot" style="position:fixed;inset:0;width:100%;height:100%"></div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  const layout = { paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)' };
+  Plotly.newPlot('plot', [], layout, { responsive: true });
   let animHandle = null;
   const step = () => {
-    Plotly.react('plot', [], {});
+    Plotly.react('plot', [], layout);
     animHandle = requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -140,11 +143,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
 def test_validate_html_passes_function_declaration_raf_callback():
     html = VALID_HTML.replace(
-        "Plotly.newPlot('plot', [], {});",
-        "let h=null; function tick(){Plotly.react('plot',[],{}); h=requestAnimationFrame(tick);} requestAnimationFrame(tick);"
+        "Plotly.newPlot('plot', [], layout, { responsive: true });",
+        "Plotly.newPlot('plot', [], layout, { responsive: true });"
+        " let h=null; function tick(){Plotly.react('plot',[],layout); h=requestAnimationFrame(tick);} requestAnimationFrame(tick);"
     )
     result = _validate_html(html)
     assert result is None
+
+
+def test_validate_html_rejects_missing_paper_bgcolor():
+    html = """<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<div id="plot" style="position:fixed;inset:0;width:100%;height:100%"></div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  Plotly.newPlot('plot', [], {}, { responsive: true });
+});
+</script>
+</body>
+</html>"""
+    result = _validate_html(html)
+    assert result is not None
+    assert "paper_bgcolor" in result
+
+
+def test_validate_html_rejects_missing_responsive():
+    html = """<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<div id="plot" style="position:fixed;inset:0;width:100%;height:100%"></div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const layout = { paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)' };
+  Plotly.newPlot('plot', [], layout);
+});
+</script>
+</body>
+</html>"""
+    result = _validate_html(html)
+    assert result is not None
+    assert "responsive" in result.lower()
 
 
 # ---------------------------------------------------------------------------
