@@ -61,7 +61,7 @@ sequenceDiagram
     BE->>FS: Write product-requirements.md
 
     FE->>BE: Open WebSocket /ws/{ws}/run/{stage}
-    BE->>BE: _prepare_workspace_env()<br/>injects MISTRAL_API_KEY + PYTHONPATH
+    BE->>BE: _prepare_workspace_env()<br/>injects MISTRAL_API_KEY into subprocess env
     BE->>SUB: asyncio.create_subprocess_exec<br/>python -m lips.compile {stage}
     SUB->>FS: Read stage configs/api.json<br/>Read contents/ (requirements, specs…)
     SUB->>Mistral: POST /v1/chat/completions<br/>(stage-specific prompt)
@@ -105,7 +105,7 @@ sequenceDiagram
 
 **Notable implementation details in this flow:**
 
-- `_prepare_workspace_env()` writes `MISTRAL_API_KEY` directly into the subprocess environment dict — it never relies solely on the `.env` file being loaded inside the child process.
+- `_prepare_workspace_env()` writes `MISTRAL_API_KEY` directly into the subprocess environment dict — it never relies solely on the `.env` file being loaded inside the child process. `lips` is installed as an editable package into the project's `.venv` via `start.sh`, so `sys.executable` (the venv Python) already has it importable — no `PYTHONPATH` manipulation is needed.
 - stdout and stderr are merged (`stderr=STDOUT`) so a single `readline()` loop handles both streams.
 - The visualization retry loop is conversational: on each bad response the rejection message is appended as a user turn and the full message history is re-sent to the LLM, giving it the context to self-correct.
 - The iframe uses `sandbox="allow-scripts allow-same-origin"` — Plotly 3D mouse drag works because `allow-same-origin` is included, while `window.parent` / `window.top` access is blocked by the viz pipeline prompt rules.
@@ -193,16 +193,16 @@ graph TD
     end
 
     subgraph "lips_runner.py"
-        LR["run_lips_stage(websocket, workspace, stage)\n──────────────────────────────────────────\n_prepare_workspace_env()\n  write key to workspace .env\n  build PYTHONPATH with lips-ide/ root\nasyncio.create_subprocess_exec\n  python -m lips.compile {stage}\nstream stdout lines → websocket.send_json\nwait() → send done event"]
+        LR["run_lips_stage(websocket, workspace, stage)\n──────────────────────────────────────────\n_prepare_workspace_env()\n  write key to workspace .env\n  inject MISTRAL_API_KEY into subprocess env\nasyncio.create_subprocess_exec\n  python -m lips.compile {stage}\n  (lips importable via venv, no PYTHONPATH needed)\nstream stdout lines → websocket.send_json\nwait() → send done event"]
     end
 
     subgraph "viz_pipeline.py"
-        VP["run_visualization(workspace_path)\n──────────────────────────────────────────\nload_dotenv + check MISTRAL_API_KEY\n_find_code_contents()\n_build_prompt(code)\nretry loop (MAX_RETRIES=2):\n  _call_mistral(api_key, messages)\n    POST mistral-large-latest\n    extract ```html``` block\n  _validate_html(html)\n    DOCTYPE / Tailwind / Plotly / script\n  on fail: append REJECTION msg + retry\nreturn {type:'html', data:html}"]
+        VP["run_visualization(workspace_path)\n──────────────────────────────────────────\nload_dotenv + check MISTRAL_API_KEY\n_find_code_contents() — skips visualization/ dirs\n_build_prompt(code) — physics files only\nretry loop (MAX_RETRIES=2):\n  _call_mistral(api_key, messages)\n    POST mistral-large-latest\n    extract ```html``` block\n  _validate_html(html)\n    DOCTYPE / Tailwind / Plotly / script\n    DOMContentLoaded / position:fixed plot div\n    function-declared RAF callbacks\n  on fail: append REJECTION msg + retry\nreturn {type:'html', data:html}"]
     end
 
     subgraph "Filesystem helpers (main.py)"
         H1["_is_lips_stage(path)\n→ checks configs/api.json"]
-        H2["_discover_stages(ws)\n→ sorted stage list + has_output flag"]
+        H2["_discover_stages(ws)\n→ pipeline-ordered stage list + has_output flag\n  (requirements → specifications → code-raw)"]
         H3["_safe_path(ws, rel)\n→ path traversal guard (403)"]
         H4["_resolve_workspace(id)\n→ 404 if not found"]
     end

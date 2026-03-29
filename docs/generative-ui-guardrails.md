@@ -77,7 +77,7 @@ R1. Your ENTIRE response MUST be a single ```html … ``` fenced block.
 ### Principle 2 — Tailwind Mandate
 *Tailwind CSS CDN must be present. Custom `<style>` blocks are allowed only for effects that Tailwind cannot express (animations, Plotly colour overrides, canvas rules).*
 
-**In `_validate_html()` — hard validation:**
+**In `_validate_html()` — hard validation (one of seven checks):**
 ```python
 if "cdn.tailwindcss.com" not in lower:
     return _REJECTION_MESSAGES["no_tailwind"]
@@ -226,6 +226,9 @@ return {"error": f"Failed after {MAX_RETRIES + 1} attempts. Last error: {last_er
 | Missing Tailwind CDN | Shows the exact `<script>` tag to copy |
 | Missing visualisation library | Shows the exact Plotly CDN `<script>` tag |
 | No `<script>` tag at all | States that JS must be in `<script>` tags |
+| Missing `DOMContentLoaded` | States all init must be inside the event listener |
+| Missing `position:fixed` on plot div | Shows the exact required inline style; explains why Tailwind alone fails inside iframes |
+| `const`/`let` RAF callback | Names the offending callback, explains hoisting, shows the corrected `function` declaration |
 
 Structured messages are more effective than generic "try again" prompts because they give the model a specific, actionable diff between what it produced and what is required.
 
@@ -241,5 +244,9 @@ These rules go beyond the paper's core principles but were added to address prob
 | **R3 `pointer-events:none`** on overlay container | The HUD overlay div was intercepting mouse drag events on the Plotly canvas, breaking 3D rotation. The overlay must be click-through except on its own interactive children. |
 | **R9b transparent Plotly backgrounds** (`paper_bgcolor`, `plot_bgcolor: 'rgba(0,0,0,0)'`) | Plotly's default white/grey backgrounds create a jarring box inside the dark IDE theme. Transparent backgrounds make the plot feel native to the dark canvas. |
 | **R13 mandatory animation playback** | Static "show final state" plots are not useful for physics simulations. The pre-computed trajectory array + `requestAnimationFrame` loop pattern gives consistent, memory-safe animation across all simulation types. |
+| **R13 `function` declarations for RAF callbacks** | The LLM was generating `const step = () => {...}` for the animation callback. Arrow functions assigned to `const`/`let` are not hoisted, so `requestAnimationFrame(step)` called at load time found `step` undefined — causing a "step is not a function" runtime error and a frozen still frame. The prompt now requires `function step() {}` declarations. `_validate_html()` detects and rejects any HTML where a `requestAnimationFrame` callback name is declared as `const`/`let` instead of `function`. |
 | **R14 duration slider** | Users frequently want to explore longer or shorter time ranges. The slider changes `t_max` and triggers a full trajectory recompute, so physics remain accurate at any duration. |
 | **R15 physics parameter sliders** | The core interactive value of the visualizer — letting users explore how changing mass, charge, field strength, etc. changes the simulation — without needing to re-run the full LIPS pipeline. |
+| **Validation: `DOMContentLoaded`** | The LLM occasionally initialises Plotly or reads DOM elements at the top level of a `<script>` block, before the DOM exists. `_validate_html()` rejects HTML that doesn't contain `DOMContentLoaded`, triggering the retry loop. |
+| **Validation: `position:fixed` on plot div** | Tailwind's `h-screen` / `h-full` classes resolve to `0px` inside an iframe. Without an explicit `position:fixed;inset:0;width:100%;height:100%` inline style, the Plotly container has zero height and renders nothing — producing a blank white page. `_validate_html()` rejects HTML missing this inline style. |
+| **`_SKIP_DIRS` excludes Python visualization dirs** | LIPS-generated code often includes a Python `visualization/` or `plot/` directory containing matplotlib code. Sending this to the LLM alongside the physics code caused it to mirror the matplotlib approach (static images) rather than building an interactive Plotly.js page. These directories are now excluded from `_build_prompt()`. |

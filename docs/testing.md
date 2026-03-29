@@ -2,13 +2,13 @@
 
 ## Overview
 
-The project has a two-part automated test suite: a **Python backend suite** (pytest) and a **TypeScript frontend suite** (vitest). Together they cover 78 tests across 9 test modules, all passing with zero failures.
+The project has a two-part automated test suite: a **Python backend suite** (pytest) and a **TypeScript frontend suite** (vitest). Together they cover 82 tests across 9 test modules, all passing with zero failures.
 
 ```
-Backend  (pytest)   43 tests  5 modules
+Backend  (pytest)   47 tests  5 modules
 Frontend (vitest)   35 tests  4 modules
 ─────────────────────────────────────────
-Total               78 tests
+Total               82 tests
 ```
 
 Run the full suite:
@@ -101,7 +101,7 @@ Tests the stage detection logic and status flags:
 
 | Test | What it checks |
 |---|---|
-| `test_stages_discovered` | `GET /stages` returns all three standard stages in order |
+| `test_stages_discovered` | `GET /stages` returns all three standard stages in pipeline order (requirements → specifications → code-raw), not alphabetical order |
 | `test_requirements_not_empty` | `requirements_empty: false` after writing content to the requirements file |
 | `test_requirements_empty_when_cleared` | `requirements_empty: true` after the file is cleared |
 | `test_has_output_false_initially` | `has_output: false` when the `out/` directory does not exist |
@@ -112,11 +112,11 @@ The `has_output` flag drives the sequential unlock logic in the UI — these tes
 
 ---
 
-### `test_viz_pipeline.py` — Visualization Pipeline (16 tests)
+### `test_viz_pipeline.py` — Visualization Pipeline (20 tests)
 
 The largest and most detailed module. Tests are split into synchronous unit tests and asynchronous integration tests. The visualization pipeline was built following the reliability framework from the Google Research paper *"Generative UI: LLMs are Effective UI Generators"* (Leviathan et al.) — see [generative-ui-guardrails.md](generative-ui-guardrails.md) for the full design rationale. The tests cover all three layers of that framework: system prompt rules (validated indirectly through `_build_prompt`), post-processor validation (`_validate_html`), and the self-healing retry loop (`run_visualization`).
 
-**Synchronous — `_validate_html` (5 tests)**
+**Synchronous — `_validate_html` (9 tests)**
 
 | Test | What it checks |
 |---|---|
@@ -125,6 +125,10 @@ The largest and most detailed module. Tests are split into synchronous unit test
 | `test_validate_html_rejects_missing_tailwind` | Missing `cdn.tailwindcss.com` returns a rejection message containing "Tailwind" |
 | `test_validate_html_rejects_missing_plotly` | HTML with no visualisation library returns a rejection with "REJECTION" |
 | `test_validate_html_rejects_missing_script` | HTML with all `<script>` tags stripped returns a rejection containing "script" |
+| `test_validate_html_rejects_missing_domcontentloaded` | HTML that initialises Plotly via `window.onload` instead of `DOMContentLoaded` is rejected |
+| `test_validate_html_rejects_no_fixed_plot` | HTML whose plot `<div>` uses only Tailwind height classes (no `position:fixed` inline style) is rejected — this is the most common cause of a blank white page in an iframe |
+| `test_validate_html_rejects_arrow_function_raf_callback` | HTML that uses `const step = () => {...}` as the `requestAnimationFrame` callback is rejected — arrow functions are not hoisted and cause "step is not a function" runtime errors |
+| `test_validate_html_passes_function_declaration_raf_callback` | HTML that uses a proper `function tick() {}` declaration for the RAF callback passes validation |
 
 **Synchronous — filesystem helpers (4 tests)**
 
