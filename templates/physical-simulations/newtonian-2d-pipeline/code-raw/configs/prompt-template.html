@@ -1,0 +1,83 @@
+<html><body>
+
+    <h1>Code Review &amp; Refinement Prompt</h1>
+
+    <h2>Overview</h2>
+    <p>
+        You are a <strong>senior code reviewer and refiner</strong> responsible for reviewing
+        generated code against its specifications and producing a corrected, polished version.
+    </p>
+
+    <p>
+        <strong>Objective:</strong> Review the code in <code>./code-raw/contents/</code>,
+        compare it against the specifications in <code>./specifications/contents/</code>,
+        and write an output file <code>out.contents</code> that contains the corrected and
+        improved version of every file, using the syntax and structure discussed in the
+        section Content Generation of this document.
+    </p>
+
+    <h2>Review Checklist</h2>
+    <ol>
+        <li><strong>Spec compliance</strong> — Does the code implement everything described in the
+            development guidelines, README, and UML diagrams? Flag and fix any missing features or
+            deviations.</li>
+        <li><strong>Correctness</strong> — Are the physics equations, numerical methods, and
+            algorithms implemented correctly? Fix any mathematical or logical errors.</li>
+        <li><strong>Runtime errors</strong> — Will the code actually run without crashing?
+            Check for import errors, missing dependencies, undefined variables, type mismatches,
+            and off-by-one errors.</li>
+        <li><strong>Edge cases</strong> — Does the code handle division by zero, empty inputs,
+            and boundary conditions gracefully?</li>
+        <li><strong>Code quality</strong> — Improve naming, remove dead code, simplify overly
+            complex logic. Keep the same file and folder structure.</li>
+        <li><strong>Entry point</strong> — Ensure the project has a clear entry point
+            (e.g. <code>main.py</code> or <code>__main__.py</code>) and can be run from the
+            terminal as described in the README.</li>
+    </ol>
+
+    <h2>Current File Contents</h2>
+
+    <h3>Specifications (reference — do not modify these)</h3>
+    <h4>Development Guidelines</h4>
+    <pre><code><file src="./specifications/contents/development-guidelines.md"></file></code></pre>
+    <h4>README</h4>
+    <pre><code><file src="./specifications/contents/README.md"></file></code></pre>
+    <h4>Class Diagram</h4>
+    <pre><code><file src="./specifications/contents/class-diagram.puml"></file></code></pre>
+    <h4>Package Diagram</h4>
+    <pre><code><file src="./specifications/contents/package-diagram.puml"></file></code></pre>
+    <h4>Use Case Diagram</h4>
+    <pre><code><file src="./specifications/contents/usecase-diagram.puml"></file></code></pre>
+
+    <h3>Code to Review</h3>
+    <folder src="./code-raw/contents"></folder>
+
+    <h2>Content Generation</h2>
+    <p>
+        Output the refined version of <strong>every</strong> file from <code>./code-raw/contents/</code>.
+        Keep the same folder structure and file names. Even if a file needs no changes, include it
+        in the output so the full project is self-contained.
+    </p>
+    <p>
+        Use this exact syntax (the actual file paths from the code above):
+    </p>
+    <pre><code>[folder src="./code-raw/contents"]
+    [file src="./code-raw/contents/&lt;path-to-file-1&gt;"]
+REFINED_FILE_CONTENTS_HERE
+    [/file]
+    [file src="./code-raw/contents/&lt;path-to-file-2&gt;"]
+REFINED_FILE_CONTENTS_HERE
+    [/file]
+    ...
+[/folder]</code></pre>
+
+    <h2>DO-NOTs!!!!!</h2>
+    <ul>
+        <li>Do not write <code>```FILE_TYPE</code> at the beginning of any file content.</li>
+        <li>Do not write <code>```</code> at the end of any file content.</li>
+        <li>Do not add new files that are not in the original code.</li>
+        <li>Do not remove files from the original code.</li>
+        <li>Do not change the folder structure.</li>
+    </ul>
+</body>
+</html>

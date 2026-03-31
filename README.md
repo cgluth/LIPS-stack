@@ -10,7 +10,7 @@ Write a physics prompt → generate Python simulation code with AI → visualise
 | Step | What happens |
 |---|---|
 | **Write** | Describe your physics simulation in plain English inside the built-in editor |
-| **Generate** | Run the three LIPS pipeline stages (Requirements → Specifications → Code) — each streams live LLM output to the console |
+| **Generate** | Run the three LIPS pipeline stages (Requirements → Specifications → Code Review) — each streams live LLM output to the console |
 | **Visualise** | A second LLM pass re-implements the physics in JavaScript and returns a self-contained interactive Plotly.js page |
 
 The visualisation renders full-bleed in an iframe with Play/Pause/Reset controls, a seek slider, a duration slider, and live physics parameter sliders — all wired to a real in-browser ODE solver, not pre-computed data.
@@ -111,24 +111,27 @@ See [`docs/architecture.md`](docs/architecture.md) for full system context, sequ
 
 ## Pipeline stages
 
-Each stage calls `python -m lips.compile <stage>` from the workspace directory. LIPS reads `configs/api.json` for the stage prompt configuration and writes output to `out/`.
+Each stage calls `python -m lips.compile <stage>` from the workspace directory. LIPS reads `configs/api.json` for the stage prompt configuration and writes output to `out/`. Each stage is named after the folder it **reads from** and writes its output into the next stage's `contents/` directory.
 
 ```
-requirements  →  structured requirements document
+requirements   reads requirements/contents/       → writes specifications/contents/
+  (natural language prompt → dev guidelines, README, UML diagrams)
       ↓
-specifications →  technical spec + class/sequence diagrams
+specifications reads specifications/contents/     → writes code-raw/contents/
+  (technical specs + diagrams → working Python simulation code)
       ↓
-code-raw       →  working Python simulation code
+code-raw       reads specifications/ + code-raw/  → refines code-raw/contents/ in-place
+  (reviews generated code against specs, fixes bugs, improves quality)
 ```
 
-The Visualize step is separate from the LIPS pipeline — it reads the generated Python source, builds a bespoke prompt, and calls Mistral directly from the backend to produce the HTML visualisation. The HTML extraction and validation follow the reliability principles from the Google Research paper *Generative UI: LLMs are Effective UI Generators* (self-healing retry loop with structured rejection messages). See [`docs/generative-ui-guardrails.md`](docs/generative-ui-guardrails.md).
+The Visualize step is separate from the LIPS pipeline — it reads the generated Python source from `code-raw/contents/`, builds a bespoke prompt, and calls Mistral directly from the backend to produce the HTML visualisation. The HTML extraction and validation follow the reliability principles from the Google Research paper *Generative UI: LLMs are Effective UI Generators* (self-healing retry loop with structured rejection messages). See [`docs/generative-ui-guardrails.md`](docs/generative-ui-guardrails.md).
 
 ---
 
 ## Project layout
 
 ```
-lips-ide/
+LIPS-stack/
 ├── start.sh                   # Boots backend + frontend, checks prerequisites
 ├── .env / .env.example        # MISTRAL_API_KEY
 ├── frontend/                  # Vite + React IDE
