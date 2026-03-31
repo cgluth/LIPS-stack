@@ -145,6 +145,8 @@ R6. FORBIDDEN JavaScript:
 R7. RE-IMPLEMENT the exact equations, parameters, and initial conditions
     from the Python source in JavaScript. Do not invent different physics
     or substitute placeholder numbers for real ones from the source.
+    If the source includes config/parameter files (JSON, YAML, etc.),
+    extract ALL values from them — do not use placeholder defaults.
 
 ── PLOTLY RENDERING — CRITICAL (most common failure cause) ─────────────
 R8. The Plotly chart container div MUST fill the full viewport. Use an
@@ -163,8 +165,8 @@ R9b. For a modern, borderless look your Plotly layout object MUST hide
     REQUIRED in EVERY Plotly layout (non-negotiable — omitting causes white background):
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor:  'rgba(0,0,0,0)',
-    For 3D scenes, REQUIRED inside the scene object (ALL fields — omitting any
-    one causes white planes or visible grid lines on a dark background):
+
+    For 3D TRAJECTORY / SCATTER simulations (particle paths, orbits):
       scene: {{
         xaxis: {{ showgrid: false, zeroline: false, visible: false }},
         yaxis: {{ showgrid: false, zeroline: false, visible: false }},
@@ -173,9 +175,18 @@ R9b. For a modern, borderless look your Plotly layout object MUST hide
         aspectmode: 'cube',
         camera: {{ eye: {{ x: 1.5, y: 1.5, z: 1.0 }} }}
       }}
-    The aspectmode:'cube' keeps all three axes equally scaled so the trajectory
-    is never squashed or stretched. The camera eye prevents the initial view
-    from being zoomed so close that the particle starts off-screen.
+
+    For 3D SURFACE / FIELD simulations (waves, heatmaps, potential fields):
+      scene: {{
+        xaxis: {{ showgrid: false, zeroline: false, visible: false }},
+        yaxis: {{ showgrid: false, zeroline: false, visible: false }},
+        zaxis: {{ showgrid: false, zeroline: false, visible: false }},
+        bgcolor: 'rgba(0,0,0,0)',
+        aspectmode: 'data',
+        camera: {{ eye: {{ x: 1.3, y: 1.3, z: 0.8 }} }}
+      }}
+    Use aspectmode:'data' for surfaces so the height axis scales naturally.
+
     For 2D plots hide axis lines and gridlines similarly:
       xaxis: {{ showgrid: false, zeroline: false, showline: false }},
       yaxis: {{ showgrid: false, zeroline: false, showline: false }}
@@ -199,54 +210,59 @@ R12. Before passing simulation arrays to Plotly, validate them:
     Always include a visible <div id="error-msg"> for such messages.
 
 ── ANIMATION PLAYBACK (MANDATORY) ──────────────────────────────────────
-R13. The visualisation MUST play through time automatically. Implement
-    this EXACT pattern — no variations:
+R13. The visualisation MUST play through time automatically.
 
-    a) Pre-compute the FULL trajectory array once on load (and again
-       whenever a physics parameter slider changes).
+    FIRST: determine the simulation type from the Python source:
+      • TRAJECTORY type (particle paths, orbits, projectiles):
+        the simulation produces 1D arrays (x[], y[], z[]) over time.
+      • FIELD type (waves, interference, surfaces, heatmaps):
+        the simulation produces a 2D grid/surface z[x][y] that evolves
+        over time.
 
-    b) Maintain animation state:
-         let frameIndex = 0;
-         let animHandle = null;
-         const STEPS_PER_FRAME = 5; // points revealed per RAF tick
+    CRITICAL for ALL types:
+      • Declare ALL animation callbacks and helpers with the `function`
+        keyword so they are hoisted — NEVER use `const tick = () => {{...}}`
+        or any arrow function, which would be undefined when first referenced.
+      • Use requestAnimationFrame for the animation loop.
+      • Use Plotly.react() to update — NEVER call Plotly.newPlot a second time.
 
-    c) In the animation loop use requestAnimationFrame and reveal the
-       trajectory incrementally with Plotly.react().
-       CRITICAL: declare the callback with the `function` keyword so it
-       is hoisted — NEVER use `const tick = () => {{...}}` or any arrow
-       function, which would be undefined when first referenced:
+    ── For TRAJECTORY simulations ──
+    a) Pre-compute the FULL trajectory arrays (xs, ys, zs, times) once on load.
+    b) Maintain state: let frameIndex = 0; let animHandle = null;
+    c) In the animation loop, reveal the trajectory incrementally:
          function tick() {{
            frameIndex = Math.min(frameIndex + STEPS_PER_FRAME,
-                                 trajectory.length - 1);
+                                  totalSteps - 1);
            Plotly.react(plotDiv,
              [{{ x: xs.slice(0, frameIndex+1),
                  y: ys.slice(0, frameIndex+1),
                  z: zs.slice(0, frameIndex+1), ... }}],
              layout);
-           updateTimeDisplay(times[frameIndex]);
-           if (frameIndex < trajectory.length - 1)
-             animHandle = requestAnimationFrame(tick);
-           else
-             onPlaybackEnd();
+           ...
          }}
 
-    d) Provide three clearly labelled control buttons.
-       All helper functions (play, pause, reset, onPlaybackEnd) MUST also
-       use `function` declarations, not arrow functions:
-         ▶ Play   — starts / resumes (calls requestAnimationFrame(tick))
-         ⏸ Pause  — stops  (calls cancelAnimationFrame(animHandle))
-         ↺ Reset  — sets frameIndex = 0, redraws first frame, stops loop
+    ── For FIELD / SURFACE simulations ──
+    a) Pre-compute the surface z-grid for EACH timestep into an array
+       of frames: frames[i] = z_grid_at_time_i (a 2D array).
+    b) Maintain state: let frameIndex = 0; let animHandle = null;
+    c) In the animation loop, swap the entire surface data each tick:
+         function tick() {{
+           frameIndex = (frameIndex + 1) % frames.length;
+           Plotly.react(plotDiv,
+             [{{ z: frames[frameIndex], type: 'surface', ... }}],
+             layout);
+           ...
+         }}
+       For surface plots, use type:'surface' with a colorscale
+       (e.g. 'Viridis', 'Plasma', 'Portland').
 
-    e) Show a live time readout next to the buttons:
-         t = 3.42 s   (updated every tick from the times array)
-
-    f) Also include a seek slider (type="range" min=0 max=trajectory
-       length-1) so the user can jump to any point. Moving it must
-       cancel the animation and redraw that single frame.
-
-    g) On initial page load the simulation MUST start playing
-       automatically — call requestAnimationFrame(tick) at the end of
-       the DOMContentLoaded handler.
+    ── Controls (BOTH types) ──
+    d) Three buttons: ▶ Play, ⏸ Pause, ↺ Reset
+    e) Live time readout: t = 3.42 s
+    f) Seek slider (range input, min=0, max=totalFrames-1)
+       Moving it must cancel animation and redraw that frame.
+    g) On initial page load, auto-play by calling
+       requestAnimationFrame(tick) at the end of DOMContentLoaded.
 
 ── SIMULATION DURATION CONTROL ──────────────────────────────────────────
 R14. Add a "Duration" slider in the controls panel that lets the user
@@ -282,15 +298,21 @@ R16. Placeholders, mock data, stub functions, hard-coded fake output,
 --- END SOURCE CODE ---
 
 Mandatory thought process (internal, do not include in output):
-1. Identify the core physics equations and all named parameters/constants.
-2. Plan the JavaScript ODE solver (Euler / RK4) and output arrays.
-3. Plan the Plotly chart type (3D scatter, surface, 2D line, etc.).
-4. Plan the full-bleed layout: Plotly div fills 100vw × 100vh; controls
+1. Classify the simulation: TRAJECTORY (particle/orbit) or FIELD (wave/surface/grid)?
+2. Identify the core physics equations and all named parameters/constants.
+   If config files are provided, extract ALL parameter values from them.
+3. Plan the JavaScript solver and output data structure:
+   • Trajectory → 1D arrays: xs[], ys[], zs[], times[]
+   • Field/surface → array of 2D grids: frames[t] = z[x][y], times[]
+4. Choose the Plotly trace type: scatter3d for trajectories, surface for fields.
+5. Plan the full-bleed layout: Plotly div fills 100vw × 100vh; controls
    are an absolute overlay (top-4 right-4). List all controls: Play/Pause/
    Reset, time readout, seek slider, duration slider, physics sliders.
-5. Determine the duration slider range from t_max in the source.
+6. Determine the duration slider range from t_max in the source.
    List every physics parameter slider with min/max/step from the source.
-6. Then generate the complete, final HTML inside the ```html … ``` block.
+7. Then generate the complete, final HTML inside the ```html … ``` block.
+   Keep the code concise to avoid hitting the token limit — no comments,
+   short variable names where clarity is not sacrificed.
 
 Remember: respond with ONLY the ```html … ``` block. Nothing else."""
 
@@ -314,11 +336,16 @@ def _find_code_contents(workspace_path: Path) -> Path | None:
 
 
 def _is_config(path: Path) -> bool:
-    return path.suffix in _CONFIG_EXTS and any(
-        kw in path.parts
-        for kw in ("sample", "samples", "config", "configs", "example", "examples",
-                   "resources", "data")
-    )
+    if path.suffix not in _CONFIG_EXTS:
+        return False
+    # Match files inside config-like directories OR files with config-like names
+    _CONFIG_DIR_KEYWORDS = {"sample", "samples", "config", "configs", "example",
+                            "examples", "resources", "data"}
+    if any(kw in path.parts for kw in _CONFIG_DIR_KEYWORDS):
+        return True
+    # Also match root-level config files (e.g. wave_config.json, settings.yaml)
+    stem = path.stem.lower()
+    return any(kw in stem for kw in ("config", "setting", "param"))
 
 
 def _safe_read(path: Path, max_bytes: int = 8_000) -> str:
@@ -366,7 +393,7 @@ async def _call_mistral(
     payload = {
         "model": "mistral-large-latest",
         "messages": messages,
-        "max_tokens": 8192,
+        "max_tokens": 16384,
         "temperature": 0,
     }
     async with httpx.AsyncClient(timeout=180) as client:
@@ -399,6 +426,17 @@ async def _call_mistral(
 # ---------------------------------------------------------------------------
 
 _REJECTION_MESSAGES = {
+    "truncated": (
+        "REJECTION — the HTML appears to be truncated (missing closing </html> tag).\n"
+        "Your response was likely cut off by the token limit.\n"
+        "You MUST produce a SHORTER response that fits within the limit.\n"
+        "Strategies to shorten:\n"
+        "  • Remove all HTML comments\n"
+        "  • Use shorter variable names in JavaScript\n"
+        "  • Combine related slider handlers into one function\n"
+        "  • Use Plotly's built-in colorscales instead of custom ones\n"
+        "The complete </html> closing tag MUST be present."
+    ),
     "no_fence": (
         "REJECTION — no ```html … ``` code block found in your response.\n"
         "Your entire response MUST be one fenced block in this format:\n"
@@ -461,6 +499,16 @@ def _validate_html(html: str) -> str | None:
     """Return a rejection message string, or None if all checks pass."""
     lower    = html.lower()
     stripped = html.lstrip()
+
+    # Truncation check — if the response was cut off, closing tags are missing
+    if "</html>" not in lower:
+        return _REJECTION_MESSAGES["truncated"]
+
+    # Also check that every <script> has a matching </script>
+    open_scripts = lower.count("<script")
+    close_scripts = lower.count("</script")
+    if open_scripts > close_scripts:
+        return _REJECTION_MESSAGES["truncated"]
 
     if not (stripped.lower().startswith("<!doctype html") or
             stripped.lower().startswith("<html")):

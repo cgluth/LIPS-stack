@@ -45,7 +45,8 @@ def test_validate_html_passes_valid():
 
 
 def test_validate_html_rejects_missing_doctype():
-    html = "<div>Hello</div>"
+    # Include </html> so truncation check doesn't fire first
+    html = "<div>Hello</div></html>"
     result = _validate_html(html)
     assert result is not None
     assert "DOCTYPE" in result
